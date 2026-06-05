@@ -2,88 +2,49 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    [Header("Movement")]
-    public float walkSpeed = 5f;
-    public float sprintSpeed = 8f;
-    public float jumpForce = 7f;
+    private CharacterController controller;
+    private Vector3 playerVelocity;
+    public float speed = 5;
+    private bool isGrounded;
+    public float gravity;
+    public float jumpHeight = 5;
 
-    [Header("Mouse Look")]
-    public Camera playerCamera;
-    public float mouseSensitivity = 100f;
-
-    private Rigidbody rb;
-    private float xRotation = 0f;
-
-    private float horizontal;
-    private float vertical;
-
-    private bool isGrounded = true;
 
     void Start()
     {
-        rb = GetComponent<Rigidbody>();
+        controller = GetComponent<CharacterController>();
 
-        rb.constraints = RigidbodyConstraints.FreezeRotationX |
-                         RigidbodyConstraints.FreezeRotationZ;
-
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
     }
+
+    
 
     void Update()
     {
-        horizontal = Input.GetAxisRaw("Horizontal");
-        vertical = Input.GetAxisRaw("Vertical");
+        isGrounded = controller.isGrounded;
+    }
 
-        MouseLook();
-
-        if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
+    public void processMove(Vector2 input) // receives the input from inputManager.cs and applied to character controller.
+    {
+        Vector3 moveDir = Vector3.zero;
+        moveDir.x = input.x;
+        moveDir.z = input.y;
+        controller.Move(transform.TransformDirection(moveDir) * speed * Time.deltaTime);
+        playerVelocity.y += gravity * Time.deltaTime;
+        if (isGrounded && playerVelocity.y < 0)
         {
-            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
-            isGrounded = false;
+            playerVelocity.y = -2;
+        }
+        controller.Move(playerVelocity * Time.deltaTime);
+
+        Debug.Log(playerVelocity.y);
+    }
+
+    public void jump()
+    {
+        if (isGrounded)
+        {
+            playerVelocity.y = Mathf.Sqrt(jumpHeight * -3.0f * gravity);
         }
     }
-
-    void FixedUpdate()
-    {
-        Move();
-    }
-
-    void Move()
-    {
-        float speed = Input.GetKey(KeyCode.LeftShift)
-            ? sprintSpeed
-            : walkSpeed;
-
-        Vector3 moveDirection =
-            (transform.forward * vertical +
-             transform.right * horizontal).normalized;
-
-        Vector3 velocity = moveDirection * speed;
-
-        rb.linearVelocity = new Vector3(
-            velocity.x,
-            rb.linearVelocity.y,
-            velocity.z
-        );
-    }
-
-    void MouseLook()
-    {
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
-        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
-
-        xRotation -= mouseY;
-        xRotation = Mathf.Clamp(xRotation, -90f, 90f);
-
-        playerCamera.transform.localRotation =
-            Quaternion.Euler(xRotation, 0f, 0f);
-
-        transform.Rotate(Vector3.up * mouseX);
-    }
-
-    private void OnCollisionEnter(Collision collision)
-    {
-        isGrounded = true;
-    }
+    
 }
